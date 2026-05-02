@@ -1,0 +1,68 @@
+# ============================================
+# Fichiers volumineux et données
+# ============================================
+data/raw/*
+data/processed/*
+models/*
+*.pkl
+*.joblib
+*.h5
+*.pb
+*.ckpt
+!models/.gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# ============================================
+# Environnement Python
+# ============================================
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ============================================
+# Jupyter Notebook
+# ============================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ============================================
+# IDE
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ============================================
+# ROS2
+# ============================================
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+*.bag
+__pycache__/
+
+# ============================================
+# Fichiers sensibles
+# ============================================
+*.env
+secrets/
+credentials/
+config/secrets/
+
+# ============================================
+# Rapports et logs
+# ============================================
+*.log
+wandb/
+mlruns/

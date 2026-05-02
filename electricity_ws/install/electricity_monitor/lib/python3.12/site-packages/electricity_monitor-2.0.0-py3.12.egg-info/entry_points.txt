@@ -1,0 +1,3 @@
+[console_scripts]
+data_collector = electricity_monitor.data_collector:main
+sensor_publisher = electricity_monitor.sensor_publisher:main

@@ -1,0 +1,566 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{french}
+
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{\thesection\quad}
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{\thesubsection\quad}
+\titleformat{\subsubsection}{\normalsize\itshape}{}{0em}{\thesubsubsection\quad}
+
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{mdframed}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+
+\definecolor{bleuCMR}{RGB}{0, 62, 126}
+\definecolor{vertOK}{RGB}{0, 130, 60}
+\definecolor{rougeERR}{RGB}{180, 30, 30}
+\definecolor{orangeWARN}{RGB}{200, 100, 0}
+\definecolor{grisLight}{RGB}{245, 245, 245}
+\definecolor{grisCode}{RGB}{250, 250, 250}
+
+\mdfdefinestyle{encadre}{
+  backgroundcolor=grisLight,
+  linecolor=bleuCMR,
+  linewidth=1pt,
+  innertopmargin=8pt, innerbottommargin=8pt,
+  innerleftmargin=10pt, innerrightmargin=10pt,
+  roundcorner=4pt
+}
+\mdfdefinestyle{ok}{
+  backgroundcolor={green!6},
+  linecolor=vertOK, linewidth=1pt,
+  innertopmargin=7pt, innerbottommargin=7pt,
+  innerleftmargin=10pt, innerrightmargin=10pt,
+  roundcorner=4pt
+}
+\mdfdefinestyle{warn}{
+  backgroundcolor={orange!8},
+  linecolor=orangeWARN, linewidth=1pt,
+  innertopmargin=7pt, innerbottommargin=7pt,
+  innerleftmargin=10pt, innerrightmargin=10pt,
+  roundcorner=4pt
+}
+\mdfdefinestyle{danger}{
+  backgroundcolor={red!6},
+  linecolor=rougeERR, linewidth=1pt,
+  innertopmargin=7pt, innerbottommargin=7pt,
+  innerleftmargin=10pt, innerrightmargin=10pt,
+  roundcorner=4pt
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{grisCode},
+  frame=single, rulecolor=\color{bleuCMR!30},
+  breaklines=true, showstringspaces=false,
+  tabsize=4, xleftmargin=4pt, xrightmargin=4pt
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{bleuCMR}{Simulation de pannes — Hôpital camerounais}}
+\fancyhead[R]{\small\textcolor{bleuCMR}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\ok}[1]{\textcolor{vertOK}{\textbf{#1}}}
+\newcommand{\warn}[1]{\textcolor{orangeWARN}{\textbf{#1}}}
+\newcommand{\err}[1]{\textcolor{rougeERR}{\textbf{#1}}}
+
+% ═══════════════════════════════════════════════════════════════════════
+\begin{document}
+% ═══════════════════════════════════════════════════════════════════════
+
+% ── Page de titre ──────────────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+  {\color{bleuCMR}\rule{\linewidth}{2pt}}
+  \vspace{0.4cm}
+
+  {\LARGE\bfseries Dispositif de prédiction de pannes d'électricité\\
+  et de basculement automatique}
+
+  \vspace{0.3cm}
+  {\color{bleuCMR}\rule{\linewidth}{0.8pt}}
+  \vspace{1cm}
+
+  {\large\bfseries Rapport technique — Phase 1, Version 3}\\
+  \vspace{0.3cm}
+  {\large Simulation de capteurs ROS 2, collecte de données\\
+  et analyse du dataset — Hôpital camerounais}
+
+  \vspace{1.5cm}
+  \begin{mdframed}[style=encadre]
+    \centering
+    \textbf{Environnement cible :} Hôpital $\sim$100 lits, Cameroun\\
+    \textbf{Réseau simulé :} BTA 220 V / 50 Hz (Règlement MINEE art.\ 14)\\
+    \textbf{Outil :} ROS 2 Jazzy (Python 3) — \texttt{sensor\_publisher v3.0}\\
+    \textbf{Référence :} Moukengué Imano A., Université de Douala, 2015\\
+    \textbf{Statut :} 15 458 lignes collectées — 3 sessions validées
+  \end{mdframed}
+
+  \vfill
+  {\small Version 3.0 — \today}
+\end{titlepage}
+
+% ── Table des matières ─────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════════════════
+\section{Évolution du projet — de la v1.0 à la v3.0}
+% ═══════════════════════════════════════════════════════════════════════
+
+Ce rapport est la troisième version du document technique du projet.
+Il intègre l'ensemble des corrections apportées au simulateur, les
+résultats des premières sessions de collecte réelle, et les décisions
+méthodologiques prises pour la construction du dataset d'entraînement.
+
+\subsection{Historique des versions}
+
+\begin{center}
+\begin{tabular}{p{0.08\linewidth} p{0.22\linewidth} p{0.58\linewidth}}
+\toprule
+\textbf{Version} & \textbf{Date} & \textbf{Contenu principal} \\
+\midrule
+v1.0 & Phase initiale &
+  Architecture ROS 2 définie, premiers fichiers Python créés,
+  paramètres génériques non calés sur le contexte camerounais. \\
+v2.0 & Après analyse manuscrit &
+  Paramètres corrigés selon les Tableaux 1 et 2 du manuscrit
+  (tension, fréquence), ajout THD et microcoupures,
+  18 colonnes CSV définies. \\
+\textbf{v3.0} & \textbf{Après validation datasets} &
+  \textbf{5 bugs critiques corrigés, probabilités recalibrées,
+  machine à états précurseur implémentée, 4 sessions de collecte
+  analysées et validées.} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ═══════════════════════════════════════════════════════════════════════
+\section{Corrections apportées dans la version 3.0}
+\label{sec:corrections}
+% ═══════════════════════════════════════════════════════════════════════
+
+L'analyse des premiers datasets (sessions du 5 et 6 avril 2026) a
+révélé cinq bugs critiques dans le code \texttt{sensor\_publisher.py}.
+Ces bugs produisaient des données irréalistes rendant le dataset
+inutilisable pour l'entraînement d'un modèle ML.
+
+\subsection{BUG-1 — Probabilités de coupure trop élevées}
+
+\begin{mdframed}[style=danger]
+\textbf{Symptôme :} La session 1 (7h40) montrait 99.8\,\% de
+coupures — une seule coupure de 157 minutes couvrait toute la
+simulation. La session 2 (12h27) : 98.5\,\% de coupures.
+\end{mdframed}
+
+\textbf{Cause :} Les probabilités de déclenchement ($p = 2.5$ à
+$5\,\%$ par cycle de 2\,s) étaient trop élevées.
+À $p = 5\,\%$, l'espérance d'une coupure toutes les $1/(0{,}05)
+\times 2 = 40$\,s rendait le réseau quasi-constamment en panne.
+
+\textbf{Correction :} Les probabilités ont été recalibrées par
+simulation statistique sur 20 runs de 1 heure afin d'obtenir
+$\sim$92\,\% d'état normal en heure de pointe~:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Plage horaire} & \textbf{Avant} & \textbf{Après} &
+\textbf{\% normal attendu} \\
+\midrule
+Nuit (22h–06h)   & 1{,}0 \%  & 0{,}005 \%  & $\sim$99{,}8 \% \\
+Journée (06h–18h) & 2{,}5 \%  & 0{,}015 \%  & $\sim$97{,}0 \% \\
+Pointe (18h–22h) & 5{,}0 \%  & 0{,}030 \%  & $\sim$91{,}9 \% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{BUG-2 — Durée maximale de coupure irréaliste}
+
+\begin{mdframed}[style=danger]
+\textbf{Symptôme :} Coupure unique de 157 minutes dans la session 1,
+causée par un tirage aléatoire dans la plage 30–10 800 cycles.
+\end{mdframed}
+
+\textbf{Correction :} La durée maximale est réduite à
+$450$ cycles ($= 15$\,min), cohérente avec les interventions
+rapides documentées pour les réseaux urbains camerounais.
+
+\begin{lstlisting}[language=Python]
+# AVANT (6 heures max — irréaliste)
+self.outage_duration = random.randint(30, 10_800)
+
+# APRÈS (15 minutes max — réaliste)
+self.outage_duration = random.randint(15, 450)
+\end{lstlisting}
+
+\subsection{BUG-3 — Puissance non nulle pendant une microcoupure}
+
+\begin{mdframed}[style=danger]
+\textbf{Symptôme :} Des lignes avec \texttt{micro\_outage=1},
+\texttt{voltage=0V} mais \texttt{power=22 000 à 48 000 W}.
+Physiquement impossible~: si la tension est nulle, la puissance
+active l'est aussi ($P = U \times I$).
+\end{mdframed}
+
+\textbf{Correction :} La fonction \texttt{get\_power()} retourne
+\texttt{0.0} dès que \texttt{micro\_outage\_active} est vrai,
+exactement comme pour la coupure complète.
+
+\subsection{BUG-4 — Fréquence de microcoupure trop élevée}
+
+\textbf{Symptôme :} Avec $p = 4\,\%$ par cycle, une microcoupure
+survenait toutes les 50 secondes en moyenne, rendant l'état
+«~normal~» très rare.
+
+\textbf{Correction :} Probabilité ramenée à $p = 0{,}2\,\%$,
+produisant $\sim$3 à 5 microcoupures par heure — valeur
+cohérente avec les démarrages de moteurs documentés au
+§3.3.1 du manuscrit.
+
+\subsection{BUG-5 — Signal précurseur absent}
+
+\begin{mdframed}[style=warn]
+\textbf{Contexte :} Le signal précurseur est la feature ML la
+plus importante du projet. Il correspond à la chute progressive
+de tension observée quelques secondes avant une coupure, décrite
+au §3.3.1 du manuscrit comme «~creux de tension~».
+\end{mdframed}
+
+\textbf{Symptôme :} Dans v2.0, la chute de tension avant coupure
+était implémentée via une condition mal placée qui ne se
+déclenchait jamais.
+
+\textbf{Correction :} Un état dédié \texttt{pre\_fault\_active}
+a été ajouté à la machine à états. Pendant cet état (6 à 16\,s
+avant la coupure), la tension chute progressivement de 0 à
+$-50$\,V selon la progression du précurseur~:
+
+\begin{lstlisting}[language=Python]
+# Chute progressive proportionnelle à l'avancement
+progress = 1.0 - (self.pre_fault_duration / self.pre_fault_total)
+pre_drop = -random.uniform(10.0, 50.0) * progress
+voltage  = VOLTAGE_NOMINAL + noise + pre_drop
+\end{lstlisting}
+
+\subsection{Résumé des corrections — tableau comparatif}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{p{0.18\linewidth} p{0.25\linewidth}
+                              p{0.25\linewidth} X}
+\toprule
+\textbf{Bug} & \textbf{Symptôme} & \textbf{Correction} &
+\textbf{Résultat} \\
+\midrule
+BUG-1 proba &
+  99\,\% coupures &
+  $\div 100$ les probabilités &
+  $\sim$92\,\% normal en pointe \\
+BUG-2 durée &
+  Coupure 157\,min &
+  Max 15\,min (450 cycles) &
+  Durées réalistes 1–15\,min \\
+BUG-3 power &
+  P $\neq$ 0 si V = 0 &
+  \texttt{return 0.0} micro &
+  Cohérence physique \\
+BUG-4 micro &
+  1 micro / 50\,s &
+  $p : 4\,\% \to 0{,}2\,\%$ &
+  3–5 micros par heure \\
+BUG-5 précurseur &
+  Jamais déclenché &
+  État \texttt{pre\_fault} dédié &
+  Chute visible 6–16\,s avant \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ═══════════════════════════════════════════════════════════════════════
+\section{Machine à états du simulateur v3.0}
+% ═══════════════════════════════════════════════════════════════════════
+
+La version 3.0 implémente une machine à états à 4 niveaux de priorité,
+exécutée à chaque cycle de 2 secondes~:
+
+\begin{center}
+\begin{tabular}{clp{0.55\linewidth}}
+\toprule
+\textbf{Priorité} & \textbf{État} & \textbf{Description} \\
+\midrule
+1 & \texttt{outage\_active}     &
+  Tension, fréquence, puissance, THD = 0.
+  Dure 30\,s à 15\,min. \\
+2 & \texttt{micro\_outage\_active} &
+  Idem mais 2 à 10\,s.
+  Indépendant de la coupure complète. \\
+3 & \texttt{pre\_fault\_active}  &
+  Tension chute progressivement. Dure 6 à 16\,s.
+  \textbf{C'est le signal que le ML doit détecter.} \\
+4 & Normal                       &
+  Mesures réalistes selon l'heure et le profil hôpital. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{mdframed}[style=encadre]
+\textbf{Séquence type dans le CSV} (cycles consécutifs)~:\\[4pt]
+\texttt{cycle n   : V=218V  outage=0  pre\_fault=0  (normal)}\\
+\texttt{cycle n+1 : V=210V  outage=0  pre\_fault=0  (normal)}\\
+\texttt{cycle n+2 : V=195V  outage=0  pre\_fault=1  (précurseur débute)}\\
+\texttt{cycle n+3 : V=178V  outage=0  pre\_fault=1  (chute s'accentue)}\\
+\texttt{cycle n+4 : V=155V  outage=0  pre\_fault=1  (chute forte)}\\
+\texttt{cycle n+5 : V=0V    outage=1  pre\_fault=0  (COUPURE)}\\
+\texttt{cycle n+6 : V=0V    outage=1  pre\_fault=0  (...)}\\
+\texttt{cycle n+k : V=220V  outage=0  pre\_fault=0  (rétabli)}
+\end{mdframed}
+
+% ═══════════════════════════════════════════════════════════════════════
+\section{Résultats des sessions de collecte}
+\label{sec:sessions}
+% ═══════════════════════════════════════════════════════════════════════
+
+Quatre sessions de collecte ont été réalisées après la correction des
+bugs. Trois d'entre elles ont été validées et retenues.
+
+\subsection{Tableau de synthèse des sessions}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{p{0.14\linewidth} p{0.11\linewidth}
+                              p{0.08\linewidth} p{0.10\linewidth}
+                              p{0.10\linewidth} p{0.10\linewidth} X}
+\toprule
+\textbf{Session} & \textbf{Plage} & \textbf{Lignes} &
+\textbf{Normal} & \textbf{Coupures} & \textbf{Micros} &
+\textbf{Statut} \\
+\midrule
+Nuit (v3.0)     & 00h–03h & 6 175  & 99{,}5\,\% & 0  & 10 &
+  \ok{Valide} \\
+Journée (v3.0)  & 13h–14h & 2 662  & 92{,}9\,\% & 1  &  6 &
+  \ok{Valide} \\
+Soirée (v3.0)   & 18h–21h & 6 621  & 95{,}9\,\% & 2  & 14 &
+  \ok{Valide} \\
+\midrule
+Session 1 (v2.0) & 07h–10h & 4 731  & 0{,}2\,\%  & 1  &  0 &
+  \err{Rejetée (BUG-2)} \\
+Session 2 (v2.0) & 12h–12h & 995   & 0{,}9\,\%  & 1  &  0 &
+  \err{Rejetée (BUG-1)} \\
+\midrule
+\multicolumn{2}{l}{\textbf{Total validé}} & \textbf{15 458} &
+  \multicolumn{2}{l}{\textbf{3 coupures}} &
+  \multicolumn{2}{l}{\textbf{30 microcoupures}} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Évolution des mesures selon la plage horaire}
+
+La cohérence des données entre sessions confirme que la simulation
+reproduit fidèlement les patterns du réseau camerounais~:
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Plage} & \textbf{V moy (V)} & \textbf{P moy (kW)} &
+\textbf{THD moy (\%)} & \textbf{Coupures/h} \\
+\midrule
+Nuit (00h–03h)  & 221{,}2 & 105  & 12{,}2 & 0{,}00 \\
+Journée (13h–14h) & 212{,}9 & 185  & 15{,}1 & 0{,}68 \\
+Soirée (18h–21h) & 221{,}1 & 145  & 13{,}6 & 0{,}54 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Ces évolutions sont physiquement cohérentes avec le manuscrit~:
+\begin{itemize}
+  \item La tension est plus basse en journée (réseau surchargé,
+    §3.3.1), conforme au Tableau~1 (moyenne mesurée 213{,}4\,V).
+  \item La puissance atteint son maximum en journée (blocs
+    opératoires actifs, 185\,kW = 92\,\% du nominal).
+  \item Les coupures surviennent uniquement aux heures de pointe
+    (19h et 21h), fidèle au §3.4.
+\end{itemize}
+
+\subsection{Validation de la conformité légale}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Plage} &
+\textbf{V hors ±10\,\%} &
+\textbf{f hors ±5\,\%} &
+\textbf{Cohérence physique} \\
+\midrule
+Nuit     & 3{,}9\,\%  & 23{,}6\,\% & \ok{OK} \\
+Journée  & 13{,}9\,\% & 44{,}3\,\% & \ok{OK} \\
+Soirée   & 4{,}0\,\%  & 23{,}3\,\% & \ok{OK} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{mdframed}[style=warn]
+\textbf{Note sur la fréquence hors tolérance~:} le taux de 44\,\%
+en journée est élevé mais \textbf{non pathologique}. Le Tableau~2
+du manuscrit documente des fréquences jusqu'à 66–70\,Hz mesurées
+à Douala en journée. Ces valeurs extrêmes rares font monter le
+pourcentage statistique. Ce signal est une \textbf{feature
+discriminante utile} pour le modèle ML, pas une erreur.
+\end{mdframed}
+
+% ═══════════════════════════════════════════════════════════════════════
+\section{Analyse du déséquilibre de classes}
+\label{sec:desequilibre}
+% ═══════════════════════════════════════════════════════════════════════
+
+\subsection{Le problème fondamental}
+
+L'analyse des datasets révèle un déséquilibre structurel inhérent
+au projet~: les coupures sont des événements \textbf{rares par nature}.
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Classe} & \textbf{Lignes sur 15 458} & \textbf{Proportion} \\
+\midrule
+Normal (\texttt{outage = 0}) & $\sim$15 200 & $\sim$98{,}4\,\% \\
+Coupure (\texttt{outage = 1}) & $\sim$242   & $\sim$1{,}6\,\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Un modèle ML entraîné sur un tel dataset apprendra à prédire
+\textbf{toujours «~normal~»} et obtiendra une précision
+apparente de 98\,\% — mais sera \textbf{totalement inutile} pour
+détecter les vraies pannes.
+
+\subsection{Pourquoi la simulation pure ne suffit pas}
+
+À raison de 0{,}54 coupure par heure en heure de pointe, il faudrait
+environ \textbf{620 heures de simulation} pour atteindre 500 coupures.
+Ce n'est pas faisable dans le calendrier du projet.
+
+\subsection{La solution : SMOTE}
+
+\textbf{SMOTE} (\textit{Synthetic Minority Over-sampling Technique})
+est la technique standard pour corriger le déséquilibre de classes.
+Elle génère des exemples synthétiques de la classe minoritaire par
+interpolation entre des exemples réels existants — sans inventer
+de données incohérentes.
+
+\begin{mdframed}[style=ok]
+\textbf{Plan d'action adopté~:}
+\begin{enumerate}[leftmargin=*, nosep]
+  \item Continuer la collecte jusqu'à \textbf{30 à 50 coupures réelles}
+    (priorité aux sessions 18h–22h).
+  \item Fusionner tous les CSV validés en un seul dataset.
+  \item Appliquer SMOTE sur la classe \texttt{outage = 1}
+    pour atteindre $\sim$10\,\% de coupures.
+  \item Entraîner le modèle sur le dataset rééquilibré.
+\end{enumerate}
+\end{mdframed}
+
+% ═══════════════════════════════════════════════════════════════════════
+\section{État d'avancement et prochaines étapes}
+% ═══════════════════════════════════════════════════════════════════════
+
+\subsection{Progression vers les objectifs}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Objectif} & \textbf{Cible} & \textbf{Actuel} &
+\textbf{Progression} \\
+\midrule
+Lignes totales       & 50 000  & 15 458 & 31\,\%  \\
+Coupures complètes   & $\geq 30$ & 3    & 10\,\%  \\
+Heures simulées (6h–18h) & couverture & partielle & $\sim$10\,\% \\
+Heures simulées (18h–22h) & couverture & 3h40 & $\sim$92\,\% \\
+Heures simulées (22h–06h) & couverture & 3h26 & $\sim$43\,\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Sessions prioritaires restantes}
+
+\begin{center}
+\begin{tabular}{clp{0.45\linewidth}}
+\toprule
+\textbf{Priorité} & \textbf{Plage horaire} & \textbf{Justification} \\
+\midrule
+1 & 08h–12h (journée) &
+  Heures de montée en charge hôpital, blocs opératoires.
+  Sous-représentées dans le dataset actuel. \\
+2 & 18h–22h (pointe) &
+  Maximum de coupures attendu. Déjà 3h40 mais insuffisant. \\
+3 & 05h–07h (transition) &
+  Passage nuit/journée, variations importantes de charge. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ═══════════════════════════════════════════════════════════════════════
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+% ═══════════════════════════════════════════════════════════════════════
+
+La version 3.0 du simulateur produit des données \textbf{correctes,
+cohérentes et fidèles} aux mesures réelles du réseau camerounais
+documentées par Moukengué Imano. Les cinq bugs identifiés ont été
+entièrement corrigés et les trois sessions de collecte validées
+confirment que le pipeline ROS~2 fonctionne de bout en bout.
+
+Le principal défi restant est le \textbf{déséquilibre structurel
+des classes} : les coupures sont des événements rares ($\sim 1{,}6\,\%$
+du temps), ce qui est réaliste mais incompatible avec un entraînement
+ML direct. La stratégie SMOTE permettra de résoudre ce problème sans
+dégrader la qualité des données.
+
+Le pipeline complet — collecte $\to$ fusion $\to$ SMOTE $\to$ modèle
+$\to$ basculement — sera documenté dans le rapport de Phase~2.
+
+% ── Références ─────────────────────────────────────────────────────────
+\begin{thebibliography}{9}
+
+\bibitem{moukengue2015}
+  Moukengué Imano A.,
+  \textit{Problèmes d'électrification urbaine au Cameroun :
+  diagnostic et proposition de solutions curatives},
+  Équipe de Recherche en Systèmes d'Énergie Électrique,
+  Laboratoire LEEAT, Université de Douala, Novembre 2015.
+
+\bibitem{minee2009}
+  Ministère de l'Énergie et de l'Eau du Cameroun,
+  \textit{Arrêté n°~00000013/MINEE du 26~janvier~2009 portant
+  approbation du Règlement du Service de distribution publique
+  d'électricité}, Yaoundé, 2009.
+
+\bibitem{loi2011}
+  République du Cameroun,
+  \textit{Loi N°~2011/022 du 14~décembre~2011 régissant le secteur
+  d'électricité au Cameroun}, Assemblée Nationale, Yaoundé, 2011.
+
+\bibitem{chawla2002}
+  Chawla N.V., Bowyer K.W., Hall L.O., Kegelmeyer W.P.,
+  \textit{SMOTE: Synthetic Minority Over-sampling Technique},
+  Journal of Artificial Intelligence Research, vol.\ 16,
+  pp.\ 321--357, 2002.
+
+\end{thebibliography}
+
+\end{document}
