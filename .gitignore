@@ -66,3 +66,14 @@ config/secrets/
 *.log
 wandb/
 mlruns/
+
+# Données — STOCKÉES SUR GOOGLE DRIVE, PAS SUR GITHUB
+data/raw/*
+data/processed/*
+*.csv
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Modèles sauvegardés
+models/*
+!models/.gitkeep
